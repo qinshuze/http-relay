@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Http转发示例 - WEB客户端</title>
+    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+</head>
+<body>
+<div id="app" style="text-align: center;padding: 50px;margin-top: 100px;">
+    <el-button @click="getFileList">获取文件列表</el-button>
+    <el-button @click="showVideo">观看视频</el-button>
+    <a style="padding: 9px;margin: 10px;border: 1px solid #dcdfe6;border-radius: 3px;" href="http://aws-cdn.xianyudev.top/file/download?_aid=123123&_path=/download/dog.zip">下载文件</a>
+    <el-button @click="uploadFile">上传文件</el-button>
+    <p>
+        <a style="font-size: 20px" href="https://gitee.com/qinshuze/http-relay/blob/master/README.md">查看项目文档</a>
+        <br/><span style="color: #a7a7a7;font-size: 14px;margin-top: 20px;display: block;"> - Http转发服务 - </span>
+    </p>
+
+
+    <el-dialog title="文件列表" :visible.sync="dialogTableVisible">
+        <el-table v-loading="loading" :data="gridData">
+            <el-table-column property="name" label="名称" width="150"></el-table-column>
+            <el-table-column property="size" label="大小" width="200"></el-table-column>
+            <el-table-column property="type" label="类型"></el-table-column>
+            <el-table-column property="lastModified" label="最后修改日期"></el-table-column>
+        </el-table>
+    </el-dialog>
+
+    <el-dialog title="播放视频" :visible.sync="dialogVideoVisible" @close="closeVideo">
+        <video controls style="width: 100%" :src="videoUrl"></video>
+    </el-dialog>
+
+    <el-dialog title="上传文件" :visible.sync="dialogUploadVisible">
+        <input type="file" id="uploadFile" /> <el-button @click="submitFile" :disabled="uploadLoading" v-loading="uploadLoading">确定</el-button>
+        <div :style="showUploadProgress ? 'opacity: 1' : 'opacity: 0'"><el-progress :percentage="uploadProgress"></el-progress><i :style="showUploadProgress ? 'display: inline-block' : 'display: none'" @click="closeUpload" class="el-icon-circle-close"></i></div>
+    </el-dialog>
+</div>
+</body>
+<!-- import Vue before Element -->
+<script src="https://unpkg.com/vue@2/dist/vue.js"></script>
+<!-- import JavaScript -->
+<script src="https://unpkg.com/element-ui/lib/index.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script>
+    new Vue({
+        el: '#app',
+        data: function() {
+            return {
+                uploadLoading: false,
+                showUploadProgress: false,
+                uploadProgress: 0,
+                dialogVideoVisible: false,
+                dialogUploadVisible: false,
+                videoUrl: "",
+                loading: false,
+                dialogTableVisible: false,
+                gridData: [],
+                cancelUpload: null
+            }
+        },
+        methods: {
+            closeVideo() {
+                this.dialogVideoVisible = false
+                this.videoUrl = ""
+            },
+            closeUpload() {
+                this.cancelToken?.()
+            },
+            showVideo() {
+                this.dialogVideoVisible = true
+                this.videoUrl = "http://aws-cdn.xianyudev.top/file/download?_aid=123123&_path=/video/dog.mp4"
+            },
+            getFileList() {
+                this.dialogTableVisible = true
+                this.loading = true
+
+                axios({
+                    url: "http://aws-cdn.xianyudev.top/api?_aid=123123&_method=getFileList&test=1123",
+                    method: "GET"
+                }).then(res => {
+                    this.gridData = res.data.map(item => {
+                        item.lastModified = new Date(item.lastModified).toLocaleString()
+                        return item
+                    })
+                }).catch((reason) => {
+                    this.dialogTableVisible = false
+                    this.$message.error('网络请求发生错误，请联系管理员！');
+                    console.error(reason)
+                }).finally(() => {
+                    this.loading = false
+                })
+            },
+            uploadFile() {
+                this.dialogUploadVisible = true
+            },
+
+            submitFile() {
+                const file = document.getElementById("uploadFile")?.files[0]
+                if (!file) return this.$message.warn('请先选择要上传的文件！');
+
+                this.showUploadProgress = true
+                this.uploadLoading = true
+
+                axios({
+                    url: `http://aws-cdn.xianyudev.top/file/upload?_aid=123123&_filename=${file.name}&_filesize=${file.size}&_file_last_modified=${file.lastModified}`,
+                    method: "POST",
+                    data: file,
+                    onUploadProgress: (progressEvent) => {
+                        this.uploadProgress = (progressEvent.loaded / progressEvent.total * 100 | 0)
+                    },
+                    cancelToken: new axios.CancelToken((c) => {
+                        this.cancelToken = c
+                    })
+                }).then(res => {
+                    this.$message.success('上传成功！');
+                }).catch(reason => {
+                    this.$message.error('上传失败，请检查网络');
+                    console.error(reason)
+                }).finally(() => {
+                    this.showUploadProgress = false
+                    this.uploadLoading = false
+                })
+            }
+        },
+    })
+</script>
+</html>

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Http转发示例 - 设备终端</title>
+    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+</head>
+<body>
+<div id="app">
+    <p>视频文件：<input type="file" id="videoFile"/></p>
+    <p>下载文件：<input type="file" id="downloadFile"/></p>
+    文件列表：<br/><textarea name="" id="fileList" cols="150" rows="10">
+  [
+    {"name": "dog.jpg", "size": 10240, "lastModified": 1681269392000, "type": "image/jpeg", "path": "/image/dog.jpg"}
+  ]
+</textarea>
+</div>
+
+</body>
+<!-- import Vue before Element -->
+<script src="https://unpkg.com/vue@2/dist/vue.js"></script>
+<!-- import JavaScript -->
+<script src="https://unpkg.com/element-ui/lib/index.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
+<script>
+    const httpRelayServerUrl = "http://aws-cdn.xianyudev.top"
+    const files = {"/download/dog.zip": "downloadFile", "/video/dog.mp4": "videoFile"}
+
+    new Vue({
+        el: '#app',
+        data: function() {
+            return {
+            }
+        },
+        methods: {
+            jsonDecode(jsonStr, msg = "消息解析错误") {
+                try {
+                    return JSON.parse(jsonStr)
+                } catch (e) {
+                    console.log(jsonStr)
+                    this.$notify.error({
+                        title: '错误',
+                        message: msg
+                    });
+                }
+            },
+            sendAnswer(ws, msgId, sender, msgType, data, code = 200, msg = "ok") {
+                ws.send(JSON.stringify({
+                    msgType: msgType,
+                    data: {
+                        code: code,
+                        msg: msg,
+                        err: "",
+                        data: data
+                    },
+                    msgId: msgId,
+                    options: {ids: [sender]}
+                }))
+            },
+
+            callMethodGetFileList(ws, msgPayload) {
+                const reqUrl = `${httpRelayServerUrl}/api/answer?_cid=${msgPayload.data.cid}`
+                const data = this.jsonDecode(document.getElementById("fileList").value)
+
+                if (data) {
+                    axios({method: "post", url: reqUrl, data: data, headers: {"Content-Type": "application/json"}})
+                    this.sendAnswer(ws, msgPayload.msgId, msgPayload.sender, "httpReady@apiAnswer", [])
+                } else {
+                    this.sendAnswer(ws, msgPayload.msgId, msgPayload.sender, "httpReady@fileReceiveReadyAnswer", [], 500, "内容解析错误")
+                }
+            }
+        },
+
+        created() {
+            const ws = new WebSocket("ws://letscall-msg.finda.buzz:8001?name=123123&room_id=httpReady&id=123123")
+            ws.onclose = () => {
+                console.error("websocket连接关闭")
+                this.$notify.error({
+                    title: '错误',
+                    message: 'websocket连接关闭'
+                });
+            }
+
+            ws.onerror = (ev) => {
+                if (ws.readyState !== ws.OPEN) {
+                    this.$notify.error({
+                        title: '错误',
+                        message: 'websocket连接失败'
+                    });
+                }
+            }
+
+            ws.onmessage = (ev) => {
+                const msgPayload = this.jsonDecode(ev.data)
+                if (!msgPayload) return;
+
+                const msgData = msgPayload.data
+                switch (msgPayload.msgType) {
+                    case "httpReady@getFileInfo":
+                        // 接收到获取文件信息消息通知，开始返回文件信息
+                        const fd = document.getElementById(files[msgData.path])
+                        const dwnFile = fd?.files[0]
+
+                        if (!dwnFile) {
+                            this.$notify.error({
+                                title: '错误',
+                                message: `${msgData.path} 文件不存在`
+                            });
+                            this.sendAnswer(ws, msgPayload.msgId, msgPayload.sender, "httpReady@getFileInfoAnswer", [], 404, "文件不存在")
+                        } else {
+
+                            this.sendAnswer(ws, msgPayload.msgId, msgPayload.sender, "httpReady@getFileInfoAnswer", {
+                                name: dwnFile.name, size: dwnFile.size, mimeType: dwnFile.type, lastModified: dwnFile.lastModified
+                            })
+                        }
+
+                        break
+                    case "httpReady@fileReceiveReady":
+                        // 接收到文件就绪消息通知，开始上传文件
+                        const fd1 = document.getElementById(files[msgData.path])
+                        const dwnFile1 = fd1?.files[0]
+                        if (!dwnFile1) {
+                            this.$notify.error({
+                                title: '错误',
+                                message: `${msgData.path} 文件不存在`
+                            });
+                            this.sendAnswer(ws, msgPayload.msgId, msgPayload.sender, "httpReady@fileReceiveReadyAnswer", [], 404, "文件不存在")
+                        } else {
+                            const start = msgData.start
+                            const end = msgData.end || dwnFile1.size
+                            const body = dwnFile1.slice(start, end)
+                            const reqUrl = `${httpRelayServerUrl}/file/upload?_cid=${msgData.cid}&_filename=${dwnFile1.name}&_filesize=${dwnFile1.size}&_file_last_modified=${dwnFile1.lastModified}`
+
+                            axios({method: "post", url: reqUrl, data: body, headers: {"Content-Type": dwnFile1.type}})
+                            this.sendAnswer(ws, msgPayload.msgId, msgPayload.sender, "httpReady@fileReceiveReadyAnswer", [])
+                        }
+                        break
+                    case "httpReady@fileUpload":
+                        // 接收到文件上传消息通知，处理消息并下载文件
+                        const reqUrl = `http://aws-cdn.xianyudev.top/file/download?_cid=${msgData.cid}`
+                        const a = document.createElement("a")
+                        a.href = reqUrl
+                        a.target="_blank"
+                        a.click()
+
+                        this.sendAnswer(ws, msgPayload.msgId, msgPayload.sender, "httpReady@fileUploadAnswer", [])
+                        break
+                    case "httpReady@apiOffer":
+                        // 接收到api邀约消息通知，处理消息并上报最终结果
+                        const callMethod = this[`callMethod${msgData.method.replace(/^\S/, s => s.toUpperCase())}`]
+                        if (!callMethod) {
+                            this.sendAnswer(ws, msgPayload.msgId, msgPayload.sender, "httpReady@apiAnswer", [], 404, "方法不存在")
+                        } else {
+                            callMethod(ws, msgPayload)
+                        }
+                        break
+                }
+            }
+        }
+    })
+</script>
+</html>

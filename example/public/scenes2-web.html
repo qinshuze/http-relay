@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Scenes1-Web</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<!--    <script type="text/javascript" src="/test-file-upload/example/public/flv/dist/flv.js"></script>-->
+</head>
+<body>
+<h1>请求下载文件部分</h1>
+
+<!--<video controls width="400" id="videoElement"></video>-->
+
+<!--<a href="http://d3hxxbuoc4eabv.cloudfront.net/file/download?app_id=123123&path=/video/dog.mp4" download="aa.mp4">aaa</a>-->
+<!--<a href="http://192.168.8.149:8100/file/download?_aid=123123&_path=/video/dog.mp4" target="_blank" download="aa.mp4">下载</a>-->
+<a href="http://192.168.8.149:8010/hai?_aid=123123&_path=/video/dog.mp4" download="aa.mp4">下载</a>
+<!--<a href="http://192.168.8.149:8010/hai?_aid=123123&_path=/video/dog.mp4" download="aa.mp4">下载</a>-->
+<!--<video src="http://16.163.105.11:7001/live/movie.flv" controls width="400"></video>-->
+<!--<video src="http://16.163.105.11:80/file/download?app_id=123123&path=/video/dog.mp4" controls width="400"></video>-->
+<!--<video src="http://192.168.8.149:8100/file/download?_aid=123123&_path=/video/dog.mp4" controls width="400"></video>-->
+<!--<video src="http://192.168.123.137:8100/file/download?_aid=123123&_path=/video/dog.mp4" controls width="400"></video>-->
+<!--<video src="http://192.168.8.149:8010/hello?_aid=123123&_path=/video/dog.mp4" controls width="400"></video>-->
+<!--<video src="http://192.168.8.149:8010/hello" controls width="400"></video>-->
+<!--<video src="http://video.xianyudev.top/file/download?app_id=123123&path=/asdas/aaa.500" controls width="400"></video>-->
+<!--<img src="http://video.xianyudev.top/file/download?app_id=123123&path=/video/dog.mp4" alt="">-->
+
+<button onclick="getFileList()">获取文件列表</button>
+<input id="uploadFile" type="file"><button onclick="clickUploadFile()">上传文件</button>
+<script>
+    const uploadFile = document.getElementById("uploadFile")
+    function getFileList() {
+        axios({
+            url: "http://192.168.8.149:8100/api?_aid=123123&_method=getFileList&test=1123",
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            data: JSON.stringify({_start: 1, end: 1000})
+        }).then(res => {
+            console.log(res.headers.get("Content-Type"))
+            console.log(res.data)
+        })
+
+        // fetch("http://192.168.8.149:8100/api?_aid=123123&_method=getFileList&test=1123", {
+        //     method: "POST",
+        //     headers: {
+        //         "Content-Type": "application/json"
+        //     },
+        //     body: JSON.stringify({_start: 1, end: 1000})
+        // }).then(res => {
+        //     console.log(res.headers.get("Content-Type"))
+        //     return res.json()
+        // }).then(data => {
+        //     console.log(data)
+        // })
+    }
+
+    function clickUploadFile() {
+        const file = uploadFile.files[0]
+        if (!file) return alert("请选择文件")
+        console.log(file)
+
+        axios({
+            url: `http://192.168.8.149:8100/file/upload?_aid=123123&_filename=${file.name}&_filesize=${file.size}&_file_last_modified=${file.lastModified}`,
+            method: "POST",
+            headers: {
+                "Content-Type": file.type
+            },
+            data: file
+        })
+
+        // fetch(`http://192.168.8.149:8100/file/upload?_aid=123123&_filename=${file.name}&_filesize=${file.size}&_file_last_modified=${file.lastModified}`, {
+        //     method: "POST",
+        //     body: file,
+        //     headers: {
+        //         "Content-Type": file.type
+        //     }
+        // })
+    }
+
+</script>
+
+<!--<script>-->
+<!--    if (flvjs.isSupported()) {-->
+<!--        var videoElement = document.getElementById('videoElement');-->
+<!--        var flvPlayer = flvjs.createPlayer({-->
+<!--            type: 'flv',-->
+<!--            url: 'http://16.163.105.11:7002/live/movie.m3u8'-->
+<!--        });-->
+<!--        flvPlayer.attachMediaElement(videoElement);-->
+<!--        flvPlayer.load();-->
+<!--        flvPlayer.play();-->
+<!--    }-->
+<!--</script>-->
+</body>
+</html>

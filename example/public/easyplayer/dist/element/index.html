@@ -1,0 +1,139 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+  <title>
+    EasyPlayer
+  </title>
+  <meta charset="utf-8"/>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1"/>
+  <meta name="renderer" content="webkit"/>
+  <meta name="force-rendering" content="webkit"/>
+  <meta content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" name="viewport">
+</head>
+<style>
+  body {
+    margin: 0;
+    padding: 0;
+  }
+</style>
+
+<body>
+<div id="playerContainer">
+  <div style="width: 100%;height: 94vh">
+    <easy-player id="player"
+                 muted="true"
+                 autoplay="false"
+                 video-title="视频测试标题"
+                 debug="true"
+                 live="true"
+                 progress="true"
+                 has-audio="false"
+                 is-trans-coding="false"
+                 decode-type="auto"
+                 easy-stretch="false"
+                 poster="https://gimg2.baidu.com/image_search/src=http%3A%2F%2Fdingyue.ws.126.net%2F2020%2F0515%2F465567a6j00qadpfz001cc000hs00b4c.jpg&refer=http%3A%2F%2Fdingyue.ws.126.net&app=2002&size=f9999,10000&q=a80&n=0&g=0n&fmt=auto?sec=1661673633&t=32888af186a7412105ed9725efa60770"
+    />
+  </div>
+</div>
+<div style="padding: 8px;z-index: 999">
+  <div style="padding: 5px;display: flex;flex-direction: row;justify-content: space-between;align-items: center;flex:1">
+    <div>
+      流地址：
+      <input style="width: 800px" id="streamUrl"
+             value="https://demo.easycvr.com:18000/flv/live/34020000001320000088_34020000001320000001_0200000001.flv"/>
+    </div>
+    <div>
+      <button id="testBtn" style="margin-right: 50px">功能测试</button>
+      <button id="btn">播放</button>
+      <button id="btn2">测试播放</button>
+    </div>
+  </div>
+</div>
+<!--<script src="https://cdn.jsdelivr.net/npm/vconsole@latest/dist/vconsole.min.js"></script>-->
+<!--<script>-->
+<!--  // VConsole 默认会挂载到 `window.VConsole` 上-->
+<!--  var vConsole = new window.VConsole();-->
+<!--</script>-->
+
+<script>
+  let vuePlayer = null
+  let isFirstPlay = true
+  const btn = document.getElementById('btn')
+  const btn2 = document.getElementById('btn2')
+  const playerEle = document.getElementById('player')
+  const testBtn = document.getElementById('testBtn')
+
+  btn.onclick = () => {
+    if (!isFirstPlay) return reloadStream();
+    isFirstPlay = false
+    let streamUrl = document.getElementById('streamUrl').value || null
+    if (streamUrl === null) playerEle.setAttribute('video-url', 'http://192.168.1.32:10086/fvod/oimswsIVR/video.m3u8')
+    else playerEle.setAttribute('video-url', streamUrl);
+    // console.log("vuePlayer = ", vuePlayer)
+    //视频加载异常时 重新初始化播放器
+  }
+
+  testBtn.onclick = async () => {
+    if (vuePlayer === undefined) return
+    // vuePlayer.seek(30); // 快进30秒
+    // vuePlayer.switchVideo()  //暂停pause
+    // vuePlayer.switchAudio()  //音频关闭
+    vuePlayer.fullscreen() // 全屏
+    // vuePlayer.changeStretch() // 视频铺满状态 只支持H264
+    // vuePlayer.snapshot(); //获取当前截屏
+    // vuePlayer.switchRecording(); //录像开关
+    // await frameToBase64() // TODO 帧数据转base64
+    // const current_time = vuePlayer.getCurrentTime()
+    // console.log("当前播放 时间  current_time =", current_time);
+  }
+
+  async function frameToBase64() {
+    // TODO 标签属性设置true 才能开启功能
+    const isTransCoding = playerEle.getAttribute("is-trans-coding")
+    if (isTransCoding === 'true') console.log('wasmImgBase64 = ', await vuePlayer.wasmFrame2Image())  //转码图片
+    else alert("请设置is-trans-coding 属性为true")
+  }
+
+  btn2.onclick = () => {
+    console.log(document.getElementsByTagName("video"))
+  }
+
+  function reloadStream(type, message) {
+    console.log("reloadStream type", type, message, "重启播放器")
+    if (type === 'ended') return vuePlayer.initPlayer()
+    if (type === 'error') return vuePlayer.initPlayer()
+    vuePlayer.initPlayer()  //播放器重启
+  }
+
+  window.onload = () => {
+    // const src = 'http://demo.easydss.com:10086/fvod/m3JSUIZ4g/video.m3u8'; //
+    // const src = 'http://demo.easycvr.com:18000/hls/34020000001320000088_34020000001320000001_0200000001/playlist.m3u8'; //
+    const src = 'webrtc://192.168.1.123:18000/rtc/34020000002000000057_34020000001320000001_0200000001'; //
+    // const src = 'https://demo.easycvr.com:4443/hls/34020000001320000072_34020000001310000001_0200000001/playlist.m3u8'; //
+    // const src = 'http://demo.easycvr.com:18000/flv/live/34020000001320000088_34020000001320000001_0200000001.flv'; //
+
+    playerEle.setAttribute('video-url', src);
+
+    if (!vuePlayer) vuePlayer = playerEle.getVueInstance(); //实例化vue 对象
+
+    // vuePlayer.seek(30); // 快进30秒
+
+    playerEle.addEventListener("error", (message) => {
+      reloadStream('error', message)
+    })
+
+    playerEle.addEventListener("message", () => {
+    })
+
+    playerEle.addEventListener("ended", () => {
+      reloadStream('ended')
+    })
+
+
+  }
+
+</script>
+<script type="text/javascript" src="EasyPlayer-element.min.js"></script></body>
+
+</html>

@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Device</title>
+</head>
+<body>
+<input type="file" id="img">
+<input type="file" id="video">
+
+<script>
+    const fileList = {"dog": "img", "video": "video"}
+    const ws = new WebSocket("ws://127.0.0.1:8001")
+    ws.addEventListener("message", (msg) => {
+        const data = JSON.parse(msg.data)
+
+        switch (data.msgType) {
+            case "downloadOffer":
+                if (!fileList[data.data.filename]) {
+                    ws.send(JSON.stringify({
+                        msgType: "downloadAnswer",
+                        data: {
+                            code: 404,
+                            msg: "文件不存在",
+                            err: "",
+                            name: data.data.filename
+                        },
+                        msgId: data.msgId
+                    }))
+                } else {
+                    ws.send(JSON.stringify({
+                        msgType: "downloadAnswer",
+                        data: {
+                            code: 200,
+                            msg: "ok",
+                            err: "",
+                            name: data.data.filename
+                        },
+                        msgId: data.msgId
+                    }))
+                }
+                break
+            case "downloadReady":
+                const inputFile = document.getElementById(fileList[data.data.filename])
+                const formData = new FormData()
+                formData.append("file", inputFile.files[0])
+                fetch("http://127.0.0.1:8100/upload?filesize=" + inputFile.files[0].size + "&id=" + data.msgId, {
+                    method: "POST",
+                    body: formData
+                })
+                break
+        }
+    })
+</script>
+</body>
+</html>

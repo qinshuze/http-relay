@@ -1,0 +1,25 @@
+{
+  "apps": [
+    {
+      "name": "httpRelayServer",
+      "script": "./dist/index.js",
+      "args": "['--port=80']",
+      "instances": "max",
+      "exec_mode": "cluster",
+      "env_production": {
+        "PORT": 80,
+        "NODE_ENV": "production"
+      }
+    },
+    {
+      "name": "webServer",
+      "script": "./webserver.js",
+      "instances": "max",
+      "exec_mode": "cluster",
+      "env_production": {
+        "PORT": 81,
+        "NODE_ENV": "production"
+      }
+    }
+  ]
+}

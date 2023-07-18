@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Scenes1-Device</title>
+</head>
+<body>
+<h1>请求下载文件部分</h1>
+<input type="file" id="file">
+<button onclick="a()">go</button>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script>
+    const fileInput = document.getElementById("file")
+    // letscall.finda.buzz
+    // const ws = new WebSocket("ws://letscall.finda.buzz:8001?name=123123&room_id=httpReady&id=123123")
+    const ws = new WebSocket("ws://localhost:8001?name=123123&room_id=httpReady&id=123123")
+    const req = axios.create()
+
+    ws.addEventListener("message", (msg) => {
+        const data = JSON.parse(msg.data||"{}")
+
+        const file = fileInput.files[0]
+        switch (data.msgType) {
+            case "httpReady@getFileInfo":
+                ws.send(JSON.stringify({
+                    msgType: "downloadAnswer",
+                    data: {
+                        code: 200,
+                        msg: "ok",
+                        err: "",
+                        data: {
+                            name: file.name,
+                            lastModified: file.lastModified,
+                            mimeType: file.type,
+                            size: file.size
+                        }
+                    },
+                    msgId: data.msgId,
+                    options: {ids: [data.sender]}
+                }))
+                break
+            case "httpReady@fileReceiveReady":
+                console.log("===========")
+                const start = data.data.start
+                const end = data.data.end || file.size
+                // const host = "192.168.123.137:8100"
+                const host = "192.168.8.149:8100"
+                // const host = "16.163.105.11"
+                const body = file.slice(start, end)
+                console.log(start, end, body)
+                axios({
+                    method: "post",
+                    url: "http://"+host+"/file/upload?_cid=" + data.data.cid + `&_filename=${file.name}&_filesize=${file.size}&_file_last_modified=${file.lastModified}`,
+                    // url: "http://192.168.8.149:8010/upload?_cid=" + data.data.cid + `&_filename=${file.name}&_filesize=${file.size}&_file_last_modified=${file.lastModified}`,
+                    data: body,
+                    headers: {
+                        "Content-Type": file.type
+                    }
+                }).then(res => {
+                    console.log(res)
+                }).catch(reason => {
+                    console.log(reason)
+                })
+
+                ws.send(JSON.stringify({
+                    msgType: "ReadyAnswer",
+                    data: {
+                        code: 200,
+                        msg: "ok",
+                        err: "",
+                        data: []
+                    },
+                    msgId: data.msgId,
+                    options: {ids: [data.sender]}
+                }))
+                break
+            case "httpReady@apiOffer":
+                const method = data.data.method
+                const cid = data.data.cid
+                switch (method) {
+                    case "getFileList":
+                        axios({
+                            method: "post",
+                            url: "http://192.168.8.149:8100/api/answer?_cid=" + cid,
+                            // url: "http://192.168.123.137:8100/api?_cid=" + cid,
+                            data: [{name: "dog.jpg", size: 10240, lastModified: 1681269392000, type: "image/jpeg", path: "/image/dog.jpg"}],
+                            headers: {
+                                "Content-Type": "application/json"
+                            }
+                        }).then(res => {
+                            console.log(res)
+                        }).catch(reason => {
+                            console.log(reason)
+                        })
+                        break
+                }
+
+                ws.send(JSON.stringify({
+                    msgType: "ApiAnswer",
+                    data: {
+                        code: 200,
+                        msg: "ok",
+                        err: "",
+                        data: []
+                    },
+                    msgId: data.msgId,
+                    options: {ids: [data.sender]}
+                }))
+
+                break
+            case "httpReady@fileUpload":
+                ws.send(JSON.stringify({
+                    msgType: "FileUploadAnswer",
+                    data: {
+                        code: 200,
+                        msg: "ok",
+                        err: "",
+                        data: []
+                    },
+                    msgId: data.msgId,
+                    options: {ids: [data.sender]}
+                }))
+
+                const url = `http://192.168.8.149:8100/file/download?_cid=${data.data.cid}`
+                axios({
+                    url: url,
+                    responseType: 'blob'
+                }).then(res => {
+                    console.log("=============", res.headers.get("Content-Disposition"), res.headers.get("Content-Disposition").match(/filename="(.+)"/))
+                    const a = document.createElement("a")
+                    a.href = window.URL.createObjectURL(res.data)
+                    a.target="_blank"
+                    a.download = res.headers.get("Content-Disposition").match(/filename="(.+)"/)?.[1] || "download"
+                    a.click()
+                }).catch(reason => {
+                    console.error(reason)
+                })
+
+                // fetch(url, {
+                //     headers: {
+                //         "Content-Language": "gzip"
+                //     }
+                // }).then(res => {
+                //     res.blob().then(blob => {
+                //         console.log("=============", res.headers.get("Content-Disposition"), blob)
+                //         const a = document.createElement("a")
+                //         a.href = window.URL.createObjectURL(blob)
+                //         a.target="_blank"
+                //         a.download = res.headers.get("Content-Disposition").match(/filename="(.+)"/)?.[1] || "download"
+                //         a.click()
+                //     }).catch(reason => {
+                //         console.error(reason)
+                //     })
+                // }).catch(reason => {
+                //     console.error(reason)
+                // })
+                break
+        }
+    })
+
+    function go() {
+        const start = parseInt(Math.random() * 1000 + "")
+        const end = start + parseInt(Math.random() * 1000 + "")
+        const host = "192.168.8.149:8010"
+        const file = fileInput.files[0]
+        console.log(start, 155585909)
+        fetch("http://"+host+"/upload?sid=" + 123, {
+            method: "POST",
+            body: file,
+            headers: {
+                "Connection": "close"
+            }
+        })
+    }
+
+    function a() {
+        go();
+        // for (let i = 0; i < 10; i++) {
+        //     setTimeout(() => go(), parseInt(Math.random() * 3 + "") * 1000)
+        // }
+    }
+</script>
+</body>
+</html>

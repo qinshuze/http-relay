@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Scenes1-Device</title>
+</head>
+<body>
+<h1>请求下载文件部分</h1>
+<input type="file" id="file">
+<button onclick="a()">go</button>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script>
+    const fileInput = document.getElementById("file")
+    // letscall.finda.buzz
+    const ws = new WebSocket("ws://letscall.finda.buzz:8001?name=123123&room_id=httpReady&id=123123")
+    const req = axios.create()
+
+    ws.addEventListener("message", (msg) => {
+        const data = JSON.parse(msg.data||"{}")
+
+        const file = fileInput.files[0]
+        switch (data.msgType) {
+            case "rpc@getFileInfo":
+                ws.send(JSON.stringify({
+                    msgType: "downloadAnswer",
+                    data: {
+                        code: 200,
+                        msg: "ok",
+                        err: "",
+                        data: {
+                            name: file.name,
+                            lastModified: file.lastModified,
+                            mimeType: file.type,
+                            size: file.size
+                        }
+                    },
+                    msgId: data.msgId,
+                    options: {ids: [data.sender]}
+                }))
+                break
+            case "rpc@fileReceiveReady":
+                const start = data.data.start
+                const end = data.data.end || file.size
+                const host = "192.168.8.149:8100"
+                // const host = "16.163.105.11"
+                const body = file.slice(start, end)
+                console.log(start, end, body)
+                axios({
+                    method: "post",
+                    url: "http://"+host+"/app/file/upload?sid=" + data.msgId,
+                    data: body,
+                    headers: {
+                        "Content-Type": file.type
+                    }
+                }).then(res => {
+                    console.log(res)
+                }).catch(reason => {
+                    console.log(reason)
+                })
+                break
+        }
+    })
+
+    function go() {
+        const start = parseInt(Math.random() * 1000 + "")
+        const end = start + parseInt(Math.random() * 1000 + "")
+        const host = "192.168.8.149:8100"
+        const file = fileInput.files[0]
+        console.log(start, 155585909)
+        fetch("http://"+host+"/app/file/upload?sid=" + 123, {
+            method: "POST",
+            body: file.slice(start, end)
+        })
+    }
+
+    function a() {
+        for (let i = 0; i < 10; i++) {
+            setTimeout(() => go(), parseInt(Math.random() * 3 + "") * 1000)
+        }
+    }
+</script>
+</body>
+</html>

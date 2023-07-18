@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Device</title>
+</head>
+<body>
+<input type="file" id="img">
+<input type="file" id="video">
+
+<script>
+    const fileList = {"/img/dog.jpg": "img", "/video/dog.mp4": "video"}
+    const ws = new WebSocket("ws://localhost:8001?name=123123&room_id=123123")
+    let inputFile = null
+    ws.addEventListener("message", (msg) => {
+        const data = JSON.parse(msg.data)
+
+        switch (data.msgType) {
+            case "rpc@getFileInfo":
+                inputFile = document.getElementById(fileList[data.data.filename])
+                if (!fileList[data.data.filename]) {
+                    ws.send(JSON.stringify({
+                        msgType: "downloadAnswer",
+                        data: {
+                            code: 404,
+                            msg: "文件不存在",
+                            err: "",
+                            data: {
+                                name: data.data.filename
+                            }
+                        },
+                        msgId: data.msgId,
+                        options: {ids: [data.sender]}
+                    }))
+                } else {
+                    ws.send(JSON.stringify({
+                        msgType: "downloadAnswer",
+                        data: {
+                            code: 200,
+                            msg: "ok",
+                            err: "",
+                            data: {
+                                name: inputFile.files[0].name,
+                                updateTime: inputFile.files[0].lastModified,
+                                filesize: inputFile.files[0].size
+                            }
+                        },
+                        msgId: data.msgId,
+                        options: {ids: [data.sender]}
+                    }))
+                }
+                break
+            case "rpc@fileReceiveReady":
+                inputFile = document.getElementById(fileList[data.data.filename])
+                const formData = new FormData()
+                formData.append("file", inputFile.files[0])
+                fetch("http://127.0.0.1:8100/app/file/upload?filesize=" + inputFile.files[0].size + "&id=" + data.msgId, {
+                    method: "POST",
+                    body: formData
+                })
+                break
+        }
+    })
+</script>
+</body>
+</html>

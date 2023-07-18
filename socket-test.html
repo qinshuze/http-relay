@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<script>
+  const ws = new WebSocket("ws://localhost:8001?name=9EB75B12461C904C7A8AF28200E5DFF4647297E1:sms&room_id=qsz&tags=device")
+  ws.onopen = () => {
+    console.log("打开成功")
+  }
+</script>
+</body>
+</html>

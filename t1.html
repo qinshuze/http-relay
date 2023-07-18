@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<button id="send">发送</button>
+<script>
+  const name = prompt("请输入");
+  const send = document.getElementById("send")
+
+  if (name === "a") {
+    const ws = new WebSocket("ws://127.0.0.1:8002?id=93a26309-6a3f-47a9-b782-103c317b01e1&name=admin&room_id=000000&tags=web")
+    send.onclick = () => {
+      ws.send(JSON.stringify({
+        msgType: "msg",
+        msg: "",
+        data: {},
+        options: {ids: ["93a26309-6a3f-47a9-b782-103c317b01e0"]},
+      }))
+    }
+  } else {
+    const ws = new WebSocket("ws://127.0.0.1:8002?id=93a26309-6a3f-47a9-b782-103c317b01e0&name=admin&room_id=000000&tags=web")
+    send.onclick = () => {
+      ws.send(JSON.stringify({
+        msgType: "msg",
+        msg: "",
+        data: {},
+        options: {ids: ["93a26309-6a3f-47a9-b782-103c317b01e1"]},
+      }))
+    }
+  }
+</script>
+</body>
+</html>
