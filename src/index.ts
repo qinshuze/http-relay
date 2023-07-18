@@ -99,7 +99,7 @@ async function getAuthToken() {
 
   params.sort()
   const url = `${new URL(process.env.MSG_PUSH_API_URL||"").host}/token`
-  const signStr = `GET ${url}?${params.toString()}`
+  const signStr = `GET ?${params.toString()}`
   const hash = HmacSHA512(signStr, secret)
   const signature = Buffer.from(enc.Base64.stringify(hash)).toString("base64")
   params.set("signature", signature)
