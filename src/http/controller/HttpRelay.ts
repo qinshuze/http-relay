@@ -268,7 +268,13 @@ export default class HttpRelay {
         // 设置响应头
         newTargetRes.setHeader('Content-Length', fileInfo.size)
         newTargetRes.setHeader("Content-Type", fileInfo.mimeType)
-        newTargetRes.setHeader("Cache-Control", "public, max-age=0");
+
+        if (fileInfo.size > (10*1024*1024)) {
+            newTargetRes.setHeader("Cache-Control", "no-store");
+        } else {
+            newTargetRes.setHeader("Cache-Control", "no-store");
+        }
+
         newTargetRes.setHeader("Last-Modified", lastModified);
         newTargetRes.setHeader("ETag", clientRequest.etag || this.getETag(fileInfo));
         newTargetRes.setHeader('Content-Disposition', `filename="${encodeURIComponent(fileInfo.name)}"`)
