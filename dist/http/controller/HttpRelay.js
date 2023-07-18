@@ -352,7 +352,6 @@ class HttpRelay {
                     return this.sendResponse(res, 404, "Not Found", JSON.stringify(result));
                 }
                 if (result.code !== 200) {
-                    console.log("======");
                     this.sendResponse(res, 502, "Gateway response abnormal", JSON.stringify(result));
                     return;
                 }

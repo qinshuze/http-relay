@@ -1,16 +1,14 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ReceiverMessage = void 0;
-class ReceiverMessage {
-    constructor(msgId = '', msgType, sender, msg = '', data = []) {
-        this.msgId = msgId;
-        this.msgType = msgType;
+exports.ReceiveMessage = void 0;
+class ReceiveMessage {
+    constructor(sender, type, content) {
         this.sender = sender;
-        this.msg = msg;
-        this.data = data;
+        this.type = type;
+        this.content = content;
     }
 }
-exports.ReceiverMessage = ReceiverMessage;
+exports.ReceiveMessage = ReceiveMessage;
 // noinspection TypeScriptValidateTypes
 class ClientMessageEvent extends Event {
     constructor(data) {

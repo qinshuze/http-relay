@@ -18,7 +18,9 @@ const dotenv_1 = require("dotenv");
 const Router_1 = __importDefault(require("./http/Router"));
 const logger_1 = __importDefault(require("./utils/logger"));
 const crypto_js_1 = require("crypto-js");
-const axios_1 = __importDefault(require("axios"));
+const msg_1 = __importDefault(require("./utils/request/msg"));
+const Client_1 = __importDefault(require("./rpc/websocket/Client"));
+const HttpRelay_1 = __importDefault(require("./http/controller/HttpRelay"));
 (0, dotenv_1.config)();
 // 获取服务端口号
 const args = (0, minimist_1.default)(process.argv.slice(2));
@@ -101,23 +103,19 @@ function getAuthToken() {
         const hash = (0, crypto_js_1.HmacSHA512)(signStr, secret);
         const signature = Buffer.from(crypto_js_1.enc.Base64.stringify(hash)).toString("base64");
         params.set("signature", signature);
-        return axios_1.default.get(`http://${url}?${params.toString()}`);
-        // return fetch(`http://${url}?${params.toString()}`)
+        return msg_1.default.get(`http://${url}?${params.toString()}`);
     });
 }
 getAuthToken().then(r => {
-    logger_1.default.error(`获取授权令牌失败 -`);
-    // const socketUrl = `${process.env.MSG_PUSH_URL}?token=${r.data.token}&name=httpRelay&room_ids=httpRelay&realm=${accessKey}`
-    // const websocketClient = new Client(socketUrl)
-    // const httpRelay = new HttpRelay(websocketClient)
-    //
-    // // 文件上传|文件下载
-    // router.get("/file/download", (req, res, options) => httpRelay.fileDownload(req, res, options))
-    // router.post("/file/upload", (req, res, options) => httpRelay.fileUpload(req, res, options))
-    //
-    // router.get("/api", (req, res, options) => httpRelay.apiOffer(req, res, options))
-    // router.post("/api", (req, res, options) => httpRelay.apiOffer(req, res, options))
-    // router.post("/api/answer", (req, res, options) => httpRelay.apiAnswer(req, res, options))
+    const socketUrl = `${process.env.MSG_PUSH_URL}?token=${r.data.token}&name=httpRelay&room_ids=httpRelay&realm=${accessKey}`;
+    const websocketClient = new Client_1.default(socketUrl);
+    const httpRelay = new HttpRelay_1.default(websocketClient);
+    // 文件上传|文件下载
+    router.get("/file/download", (req, res, options) => httpRelay.fileDownload(req, res, options));
+    router.post("/file/upload", (req, res, options) => httpRelay.fileUpload(req, res, options));
+    router.get("/api", (req, res, options) => httpRelay.apiOffer(req, res, options));
+    router.post("/api", (req, res, options) => httpRelay.apiOffer(req, res, options));
+    router.post("/api/answer", (req, res, options) => httpRelay.apiAnswer(req, res, options));
 }).catch(reason => {
     logger_1.default.error(`获取授权令牌失败 - ${reason}`);
     httpServer.close();
