@@ -44,8 +44,8 @@ router.interceptor((req, res, next, options) => {
     // 跨域设置
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Credentials", "true");
-    res.setHeader("Access-Control-Request-Method", "GET,POST,OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization,Token");
+    res.setHeader("Access-Control-Request-Method", "*");
+    res.setHeader("Access-Control-Allow-Headers", "*");
     res.setHeader("Access-Control-Expose-Headers", "*");
     if (req.method === "OPTIONS") {
         res.end();
