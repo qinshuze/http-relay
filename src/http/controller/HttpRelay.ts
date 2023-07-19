@@ -299,7 +299,7 @@ export default class HttpRelay {
         })
 
         const st = setInterval(() => {
-            console.log(`${parseInt((dataSize / 1024) + "")} KB/s`)
+            // console.log(`${parseInt((dataSize / 1024) + "")} KB/s`)
             dataSize = 0
         }, 1000)
 
