@@ -238,10 +238,10 @@ export default class HttpRelay {
     /**
      * 文件转发
      * @param req 来源请求
-     * @param res 来源请求
+     * @param res 来源响应
      * @param cid 客户端请求id
      * @param targetReq 目标请求
-     * @param targetRes 目标请求
+     * @param targetRes 目标响应
      * @private
      */
     private fileRelay(req: IncomingMessage, res: ServerResponse, cid: string, targetReq?: IncomingMessage, targetRes?: ServerResponse) {
@@ -292,10 +292,21 @@ export default class HttpRelay {
 
         // 开始转发文件流
         let dataSize = 0
+        let total = 0
+        let isWriteOk = false
         req.on("data", data => {
             dataSize += data.length
+            total += data.length
             if (newTargetRes.writableEnded || newTargetRes.closed) return;
             newTargetRes.write(data)
+            if (total >= rangeEnd) {
+                if (!isWriteOk) {
+                    isWriteOk = true
+                    res.end()
+                    console.log("写入完成")
+                    this.sendResponse(newTargetRes)
+                }
+            }
         })
 
         const st = setInterval(() => {
@@ -304,8 +315,11 @@ export default class HttpRelay {
         }, 1000)
 
         req.on("end", () => {
-            console.log("写入完成")
-            this.sendResponse(newTargetRes)
+            if (!isWriteOk) {
+                isWriteOk = true
+                console.log("写入完成")
+                this.sendResponse(newTargetRes)
+            }
         })
 
         // 如果在数据转发过程中，客户端被中断，则关闭当前请求并响应异常状态
