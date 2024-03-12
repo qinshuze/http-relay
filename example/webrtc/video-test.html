@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>VideoTest</title>
+</head>
+<body>
+<input type="file" id="videoFile">
+<button id="playBtn">播放</button>
+<div id="videoBox"></div>
+<script>
+
+    if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.addEventListener("controllerchange", () => {
+            console.log("change")
+            window.location.reload()
+        })
+
+        navigator.serviceWorker.register("./sw.js")
+            .then((registration) => {
+                navigator.serviceWorker.controller.postMessage({type: "register"})
+                registration.addEventListener("updatefound", () => {
+                    const newWorker = registration.installing
+                    newWorker.addEventListener("statechange", () => {
+                        if (newWorker.state === 'installed') {
+                            newWorker.postMessage({action: 'force-refresh'})
+                        }
+                    })
+                })
+
+                console.log("Service Worker registered with scope:", registration.scope);
+            })
+            .catch((error) => {
+                console.error("Service Worker registration failed:", error)
+            });
+    }
+
+    // const videoFileElement = document.getElementById("videoFile")
+    // const videoShowElement = document.getElementById("videoShow")
+    // const playBtnElement = document.getElementById("playBtn")
+    //
+    // playBtnElement.onclick = () => {
+    //     const videoFile = videoFileElement.files[0]
+    //     if (!videoFile) return alert("请选择视频文件")
+    //     const blob = videoFile.slice(0, 4096000)
+    //     console.log(blob)
+    //
+    //     // const writable = new WritableStream()
+    //     // const defaultWriter = writable.getWriter()
+    //     //
+    //     //
+    //     // defaultWriter.write("")
+    //
+    //     videoShowElement.src = URL.createObjectURL(blob)
+    //     videoShowElement.play()
+    // }
+
+    const playBtnEl = document.getElementById("playBtn")
+    const url = `ws://localhost:8001?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJFeHBpcmUiOjE3MTAyMzA0MTgsIklhdCI6MTcxMDE0NDAxOCwiUGF5bG9hZCI6IntcIkFjY2Vzc0tleVwiOlwiREN3R09lMX
+A1SHpFakU0SlRiSmJcIn0ifQ.hZm-lB8q6GT7WI7HFVmIE2UsdOgUcfJT6Jme132QthA&name=webrtc-client&room_ids=webrtc&realm=DCwGOe1p5HzEjE4JTbJb`
+    const ws = new WebSocket(url)
+    let receiver = "webrtc-device"
+    const peer = new RTCPeerConnection()
+    const dataChannel = peer.createDataChannel("default", {negotiated: true, id: 1})
+
+    ws.onopen = () => {
+        console.info("WS 连接成功！")
+
+    }
+
+    peer.onconnectionstatechange = (event) => {
+        switch (peer.connectionState) {
+            case "connecting":
+                console.log("连接成功")
+                break
+            case "failed":
+                console.log("连接失败")
+        }
+    }
+
+    playBtnEl.onclick = () => {
+        document.getElementById("videoBox").innerHTML = `<video controls width="500" src="./test.mp4" id="videoShow"></video>`
+        return null;
+        peer.createOffer()
+            .then(desc => peer.setLocalDescription(desc))
+            .then(() => {
+                ws.send(JSON.stringify({
+                    content: JSON.stringify({
+                        msgType: "signaling@offer",
+                        payload: peer.localDescription?.sdp || "",
+                    }),
+                    names: [receiver]
+                }))
+            })
+    }
+
+    ws.onerror = () => {
+        console.error("WS 连接失败！")
+    }
+
+    ws.onclose = () => {
+        console.warn("WS 关闭！")
+    }
+
+    peer.onicecandidate = (event) => {
+        if (!event.candidate) return;
+        if (!receiver) return;
+        ws.send(JSON.stringify({
+            content: JSON.stringify({
+                msgType: "signaling@candidate",
+                payload: event.candidate,
+            }),
+            names: [receiver]
+        }))
+    }
+
+    ws.onmessage = (event) => {
+        const data = JSON.parse(event.data || "{}")
+        const content = JSON.parse(data.content || "{}")
+
+        switch (content.msgType) {
+            case "signaling@answer":
+                peer.setRemoteDescription({type: "answer", sdp: content.payload})
+                break
+            case "signaling@candidate":
+                peer.addIceCandidate(content.payload)
+                break
+        }
+    }
+
+
+    navigator.serviceWorker.addEventListener("message", (event) => {
+        const {type, data} = event.data
+        const file = document.getElementById("videoFile").files[0]
+        switch (type) {
+            case "get-video-info":
+                navigator.serviceWorker.controller.postMessage({
+                    type: "put-video-info", data: {
+                        name: file.name,
+                        size: file.size,
+                        mimeType: file.type,
+                        lastModified: file.lastModified
+                    }
+                })
+                break
+            case "get-video-data-all":
+                navigator.serviceWorker.controller.postMessage({
+                    type: "put-video-data-all", data: {
+                        name: file.name,
+                        size: file.size,
+                        mimeType: file.type,
+                        lastModified: file.lastModified,
+                    }
+                })
+                break
+            case "get-video-stream-all":
+                file.slice(data.start, file.size).arrayBuffer().then(buffer => {
+                    navigator.serviceWorker.controller.postMessage({
+                        type: "put-video-stream-all", data: buffer
+                    }, [buffer])
+                })
+                break
+            case "get-video-data-range":
+                const chunk = file.slice(data.start, data.end || file.size)
+                navigator.serviceWorker.controller.postMessage({
+                    type: "put-video-data-range", data: {
+                        name: file.name,
+                        size: file.size,
+                        mimeType: file.type,
+                        lastModified: file.lastModified,
+                        chunkSize: chunk.size
+                    }
+                })
+                break
+            case "get-video-stream-range":
+                file.slice(data.start, data.end || file.size).arrayBuffer().then(buffer => {
+                    navigator.serviceWorker.controller.postMessage({
+                        type: "put-video-stream-range", data: buffer
+                    }, [buffer])
+                })
+                break
+        }
+    })
+</script>
+
+</body>
+</html>

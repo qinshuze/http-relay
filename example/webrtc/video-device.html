@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>WebRTC - Device</title>
+</head>
+<body>
+<input type="file" id="videoFile">
+<script>
+    const url = `ws://localhost:8001?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJFeHBpcmUiOjE3MTAyMzA0MTgsIklhdCI6MTcxMDE0NDAxOCwiUGF5bG9hZCI6IntcIkFjY2Vzc0tleVwiOlwiREN3R09lMX
+A1SHpFakU0SlRiSmJcIn0ifQ.hZm-lB8q6GT7WI7HFVmIE2UsdOgUcfJT6Jme132QthA&name=webrtc-device&room_ids=webrtc&realm=DCwGOe1p5HzEjE4JTbJb`
+    const videoInputEl = document.getElementById("videoFile")
+    const ws = new WebSocket(url)
+
+    ws.onopen = () => {
+        console.info("WS 连接成功！")
+    }
+
+    ws.onerror = () => {
+        console.error("WS 连接失败！")
+    }
+
+    ws.onclose = () => {
+        console.warn("WS 连接关闭")
+    }
+
+    const peer = new RTCPeerConnection()
+    const dataChannel = peer.createDataChannel("default", {negotiated: true, id: 1})
+    let receiver = ""
+    peer.onicecandidate = (event) => {
+        if (!event.candidate) return;
+        if (!receiver) return;
+        ws.send(JSON.stringify({
+            content: JSON.stringify({
+                msgType: "signaling@candidate",
+                payload: event.candidate,
+            }),
+            names: [receiver]
+        }))
+    }
+
+    ws.onmessage = (event) => {
+        const data = JSON.parse(event.data || "{}")
+        const content = JSON.parse(data.content || "{}")
+
+        switch (content.msgType) {
+            case "signaling@offer":
+                receiver = data.sender
+                peer.setRemoteDescription({type: "offer", sdp: content.payload})
+                    .then(() => peer.createAnswer())
+                    .then(desc => peer.setLocalDescription(desc))
+                    .then(() => {
+                        ws.send(JSON.stringify({
+                            content: JSON.stringify({
+                                msgType: "signaling@answer",
+                                payload: peer.localDescription?.sdp || "",
+                            }),
+                            names: [receiver]
+                        }))
+                    })
+                break
+            case "signaling@candidate":
+                peer.addIceCandidate(content.payload)
+                break
+            case "video@info":
+                const fileInfo = videoInputEl.files[0]
+                ws.send(JSON.stringify({
+                    content: JSON.stringify({
+                        name: fileInfo.name,
+                        type: fileInfo.mimeType,
+                        size: fileInfo.size
+                    }),
+                    names: [receiver]
+                }))
+                break
+            case "video@data":
+                const {start, end} = content.payload
+                const file = videoInputEl.files[0]
+                dataChannel.send(file.splice(start, end))
+                break
+        }
+    }
+</script>
+</body>
+</html>
