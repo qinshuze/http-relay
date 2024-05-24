@@ -80,7 +80,7 @@ A1SHpFakU0SlRiSmJcIn0ifQ.hZm-lB8q6GT7WI7HFVmIE2UsdOgUcfJT6Jme132QthA&name=webrtc
 
     playBtnEl.onclick = () => {
         document.getElementById("videoBox").innerHTML = `<video controls width="500" src="./test.mp4" id="videoShow"></video>`
-        return null;
+        // return null;
         peer.createOffer()
             .then(desc => peer.setLocalDescription(desc))
             .then(() => {

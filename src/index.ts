@@ -108,6 +108,8 @@ async function getAuthToken() {
 
 getAuthToken().then(r => {
   const socketUrl = `${process.env.MSG_PUSH_URL}?token=${r.data.token}&name=httpRelay&room_ids=httpRelay&realm=${accessKey}`
+  console.log(socketUrl)
+  return
   const websocketClient = new Client(socketUrl)
   const httpRelay = new HttpRelay(websocketClient)
 

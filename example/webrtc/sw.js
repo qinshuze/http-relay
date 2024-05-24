@@ -139,7 +139,7 @@ self.addEventListener("fetch", (event) => {
 
                     // 通知客户端获取视频流
                     client.postMessage({type: "get-video-stream-range", data: range})
-
+new Request("", {body: ""})
                     const response = new Response(readable, {
                         status: 206,
                         statusText: "ok",
@@ -157,7 +157,7 @@ self.addEventListener("fetch", (event) => {
                         },
                     })
 
-                    resolve(response)
+                    resolve(response.url)
                 })
 
                 // 通知客户端获取视频信息
